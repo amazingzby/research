@@ -105,25 +105,6 @@ def LandmarkImageLayer(landmarks_affine,img_landmarks,batch_size):
         Ret = tf.reshape(tf.reduce_max(Ret, axis=0), [IMGSIZE, IMGSIZE, 1])
         return Ret
     return tf.map_fn(draw_landmarks, Landmarks)
-    """
-    landmark = tf.get_variable(landmarks_affine,shape=[batch_size,136])
-    HalfSize = 8
-    IMGSIZE  = 112
-    landmark = tf.reshape(landmark,[-1,2])
-    landmark = tf.clip_by_value(landmark, HalfSize, IMGSIZE - 1 - HalfSize)
-
-    offsets = np.array(list(itertools.product(range(-HalfSize, HalfSize+1), range(-HalfSize, HalfSize+1))))
-    offsets = tf.constant(offsets)
-    img = tf.zeros((1, IMGSIZE, IMGSIZE))
-    intLandmark = landmark.astype('int32')
-    locations = offsets + intLandmark
-    dxdy = landmark - intLandmark
-    offsetsSubPix = offsets - dxdy
-    vals = 1 / (1 + tf.sqrt(tf.summary(offsetsSubPix * offsetsSubPix, axis=1) + 1e-6))
-    img[0, locations[:, 1], locations[:, 0]] = vals
-    img = tf.reduce_max(img, 0,name='img_landmarks')
-    return img
-    """
 
 def LandmarkInitLayer(s1_output,initLandmarks,s1_landmarks,batch_size):
     #output         = tf.get_variable(name=s1_output,shape=[batch_size,136]) 
@@ -179,3 +160,34 @@ def TransformParamsLayer_test(transformed_,output, meanShape,batch_size):
     params = tf.concat([a, b, -b, a, gap_mean], 1,name=output)   # shape: 64 * 6
     
     return params
+
+def CreatPair(features,landmarks,scale,batch_size):
+    landmarks = landmarks*scale
+    landmarks = tf.reshape(landmarks,[batch_size,68,2])
+    #landmarks = tf.to_int32(landmarks)
+    #landmarks = tf.clip_by_value(landmarks,0,13)
+    print("TEST!!!")
+    print(features.shape)
+    print(landmarks.shape)
+    
+    def get_feature(feature,landmark):
+        landmark     = tf.to_int32(landmark)
+        landmark     = tf.clip_by_value(landmark,0,13)
+        point_init_1 = landmark[0]
+        point_init_2 = landmark[1]
+        pair_init_1  = feature[point_init_1[0],point_init_1[1],:]
+        pair_init_2  = feature[point_init_2[0],point_init_2[1],:]
+        pair_feature = tf.concat([pair_init_1,pair_init_2],axis=0)
+        for i in range(68):
+            for j in range(i,68):
+                if i ==0 and j ==1:
+                    continue
+                point1 = landmark[i]
+                point2 = landmark[j]
+                pair_1 = feature[point1[0],point1[1],:]
+                pair_2 = feature[point2[0],point2[1],:]
+                pair   = tf.concat([pair_1,pair_2],axis=0)
+                pair_feature = pair_feature + pair
+        print(pair_feature)
+        return pair_feature
+    return tf.map_fn(lambda args: get_feature(args[0],args[1]),(features,landmarks),dtype=tf.float32)

@@ -2,12 +2,13 @@ import tensorflow as tf
 
 import numpy as np
 
-from layers import AffineTransformLayer
-from layers import TransformParamsLayer
-from layers import LandmarkImageLayer
-from layers import LandmarkInitLayer
-from layers import LandmarkTransformLayer
-from layers import TransformParamsLayer_test
+from layers import *
+#from layers import AffineTransformLayer
+#from layers import TransformParamsLayer
+#from layers import LandmarkImageLayer
+#from layers import LandmarkInitLayer
+#from layers import LandmarkTransformLayer
+#from layers import TransformParamsLayer_test
 
 
 class FaceAlignmnetTraining(object):
@@ -23,8 +24,6 @@ class FaceAlignmnetTraining(object):
         Pt = tf.reshape(Prediction, [-1, N_LANDMARK, 2])
         loss = tf.reduce_mean(tf.sqrt(tf.reduce_sum(tf.squared_difference(Gt, Pt), 2)), 1)
         norm = tf.norm(tf.reduce_mean(Gt[:, 36:42, :],1) - tf.reduce_mean(Gt[:, 42:48, :],1), axis=1)
-        print("hello!!!")
-        print(loss)
         return loss/norm
 
     def addDANStage(self,stageIdx,Input,sn_landmarks):
@@ -68,10 +67,15 @@ class FaceAlignmnetTraining(object):
         sn_conv4_2 = tf.layers.batch_normalization(tf.layers.conv2d(sn_conv4_1,512,3,1,padding='same',
             activation=tf.nn.relu,kernel_initializer=tf.glorot_uniform_initializer()),name=curStage+'/conv4_2')
         sn_pool4   = tf.layers.max_pooling2d(sn_conv4_2,2,2,padding='same',name=curStage+'/pool4')
+        
+        scale      = tf.constant(14/float(112))
+        sn_pair    = CreatPair(sn_conv4_2,sn_landmarks_affine,scale,self.batch_size)
 
         sn_pool4_flat = tf.contrib.layers.flatten(sn_pool4,scope=curStage+'/pool4_flat')
-        sn_fc1_dropout= tf.layers.dropout(sn_pool4_flat,0.5,name=curStage+'/fc1_dropout')
-        sn_fc1        = tf.layers.batch_normalization(tf.layers.dense(sn_fc1_dropout,256,activation=tf.nn.relu,
+
+        sn_concat  = tf.concat([sn_pool4_flat,sn_pair],axis=1)
+        #sn_fc1_dropout= tf.layers.dropout(sn_pool4_flat,0.5,name=curStage+'/fc1_dropout')
+        sn_fc1        = tf.layers.batch_normalization(tf.layers.dense(sn_concat,256,activation=tf.nn.relu,
             kernel_initializer=tf.glorot_uniform_initializer()),name = curStage+'/fc1')
         sn_output     = tf.layers.dense(sn_fc1,136,name = curStage+'/output')
         sn_landmark   = sn_landmarks_affine + sn_output
@@ -115,7 +119,6 @@ class FaceAlignmnetTraining(object):
         for i in range(1,self.nStages):
             sn_landmarks=self.addDANStage(i+1,Input,sn_landmarks)
         sn_cost      = tf.reduce_mean(self.normRmse(groundTruth,sn_landmarks))
-        print(sn_cost)
         #with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS,'stage')):
         S2_Optimizer = tf.train.AdamOptimizer(0.001).minimize(sn_cost)#,\
         #                   var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,'s1'))
