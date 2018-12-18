@@ -164,30 +164,23 @@ def TransformParamsLayer_test(transformed_,output, meanShape,batch_size):
 def CreatPair(features,landmarks,scale,batch_size):
     landmarks = landmarks*scale
     landmarks = tf.reshape(landmarks,[batch_size,68,2])
-    #landmarks = tf.to_int32(landmarks)
-    #landmarks = tf.clip_by_value(landmarks,0,13)
-    print("TEST!!!")
-    print(features.shape)
-    print(landmarks.shape)
-    
-    def get_feature(feature,landmark):
-        landmark     = tf.to_int32(landmark)
-        landmark     = tf.clip_by_value(landmark,0,13)
-        point_init_1 = landmark[0]
-        point_init_2 = landmark[1]
-        pair_init_1  = feature[point_init_1[0],point_init_1[1],:]
-        pair_init_2  = feature[point_init_2[0],point_init_2[1],:]
-        pair_feature = tf.concat([pair_init_1,pair_init_2],axis=0)
-        for i in range(68):
-            for j in range(i,68):
-                if i ==0 and j ==1:
-                    continue
-                point1 = landmark[i]
-                point2 = landmark[j]
-                pair_1 = feature[point1[0],point1[1],:]
-                pair_2 = feature[point2[0],point2[1],:]
-                pair   = tf.concat([pair_1,pair_2],axis=0)
-                pair_feature = pair_feature + pair
-        print(pair_feature)
-        return pair_feature
-    return tf.map_fn(lambda args: get_feature(args[0],args[1]),(features,landmarks),dtype=tf.float32)
+    landmarks = tf.to_int32(landmarks)
+    landmarks = tf.clip_by_value(landmarks,0,13)
+    index     = tf.constant(np.reshape(np.arange(batch_size),(batch_size,1)),dtype=tf.int32)
+    #landmarks = tf.concat([index,landmarks],axis=1)
+    #point_features = tf.tf.gather_nd(features,lanmarks)
+    point_init_1 = tf.concat([index,landmarks[:,0]],axis=1)
+    point_init_2 = tf.concat([index,landmarks[:,1]],axis=1)
+    feature_init_1 = tf.gather_nd(features,point_init_1)
+    feature_init_2 = tf.gather_nd(features,point_init_2)
+    pair_feature = tf.concat([feature_init_1,feature_init_2],axis=1)
+    for i in range(68):
+        for j in range(i+1,68):
+            if i==0 and j==1:
+                continue
+            point1 = tf.concat([index,landmarks[:,i]],axis=1)
+            point2 = tf.concat([index,landmarks[:,j]],axis=1)
+            feature1 = tf.gather_nd(features,point1)
+            feature2 = tf.gather_nd(features,point2)
+            pair_feature += tf.concat([feature1,feature2],axis=1)
+    return pair_feature

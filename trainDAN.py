@@ -35,8 +35,9 @@ with tf.Session() as sess:
         imgs,labels = sess.run([imgs_batch,landmarks_batch])
         sess.run(train_step,feed_dict={x:imgs,y:labels})
         #train_step.run()
-        if(i%1000==0):
+        if(i%1==0):
             temp = loss.eval(feed_dict={x:imgs,y:labels})
             print(temp)
+        if(i%500==0):
             saver.save(sess,'model/model_iter',global_step=i)
 
