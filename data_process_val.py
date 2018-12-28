@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 #npz_file = './data/validation.npz'
-tfrecords_path = './data/train.tfrecords'
+tfrecords_path = './data/ibus.tfrecords'
 
 HEIGHT = 112
 WIDTH  = 112
@@ -11,8 +11,8 @@ def creatTfrecords(tfrecordsPath):
     with tf.python_io.TFRecordWriter(tfrecordsPath) as writer:
         total = 0
         print('Writing dataset...')
-        for i in range(200):
-            dataset  = np.load('data/train_processed_'+str(i+1)+'.npz')
+        for i in range(1):
+            dataset  = np.load('data/validation.npz')
             num_imgs = dataset['imgs'].shape[0]
 
             for idx in range(num_imgs):
@@ -43,7 +43,7 @@ def loadTfrecords(tfrecordsPath,batch_size):
         landmark = features['landmark']
         return img,landmark
     dataset = tf.data.TFRecordDataset(tfrecordsPath)
-    dataset = dataset.map(parser,num_parallel_calls=32).shuffle(buffer_size=1000).repeat(400).batch(batch_size)
+    dataset = dataset.map(parser,num_parallel_calls=32).repeat(300).shuffle(buffer_size=1000).batch(batch_size)
     #dataset = dataset.map(parser,num_parallel_calls=32).batch(batch_size)
     iterator = dataset.make_one_shot_iterator()
     img_batch,landmark_batch = iterator.get_next()
@@ -68,14 +68,14 @@ def loadTfrecords_t(tfrecordsPath,batch_size):
     return img_batch,landmark_batch
 
 if __name__ == '__main__':
-	#creatTfrecords(tfrecords_path)
+    creatTfrecords(tfrecords_path)
 
-	imgs,landmarks = loadTfrecords(tfrecords_path,32)
-	with tf.Session() as sess:
-		for i in range(2):
-			img_batch,landmarks_batch = sess.run([imgs,landmarks])
-			print('image shape:')
-			print(img_batch.shape)
-		print("Good job!")
+    imgs,landmarks = loadTfrecords(tfrecords_path,32)
+    with tf.Session() as sess:
+        for i in range(2):
+            img_batch,landmarks_batch = sess.run([imgs,landmarks])
+            print('image shape:')
+            print(img_batch.shape)
+        print("Good job!")
 
 
