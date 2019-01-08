@@ -7,7 +7,7 @@ STAGE = 1
 batch_size = 1
 total_img  = 554
 testSet    = "data/commonSet.npz"
-outputsnap='model/S1_model_iter-14287'
+outputsnap='model/S1_model_iter-47624'
 tfrecordsPath = 'data/train.tfrecords'
 initmarks     = np.load('data/initlandmark.npy')
 initmarks     = tf.constant(initmarks,dtype=tf.float32)
